@@ -959,7 +959,17 @@ class Xlsx extends BaseReader
                                             $value = $value->getPlainText();
                                         }
 
+                                        // Style information?
+                                        $styleIndex = 0;
+                                        if ($c['s'] && !$this->readDataOnly) {
+                                            // no style index means 0, it seems
+                                            $styleIndex = (isset($styles[(int) ($c['s'])]) ?
+                                                (int) ($c['s']) : 0);
+                                        }
+
+                                        /*
                                         $cell = $docSheet->getCell($r);
+
                                         // Assign value
                                         if ($cellDataType != '') {
                                             $cell->setValueExplicit($value, $cellDataType);
@@ -976,6 +986,15 @@ class Xlsx extends BaseReader
                                             $cell->setXfIndex(isset($styles[(int) ($c['s'])]) ?
                                                 (int) ($c['s']) : 0);
                                         }
+                                        */
+                                        $cellData = [
+                                            'value' => $value,
+                                            'calculatedValue' => $calculatedValue,
+                                            'type' => $cellDataType,
+                                            'styleIndex' => $styleIndex,
+                                        ];
+                                        $docSheet->getCellCollection()->createNewPredefinedCell($r, $cellData, $this->lazyInitCells);
+
                                         $rowIndex += 1;
                                     }
                                     $cIndex += 1;

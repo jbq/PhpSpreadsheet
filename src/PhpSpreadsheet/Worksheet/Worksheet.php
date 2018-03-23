@@ -164,13 +164,6 @@ class Worksheet implements IComparable
     private $conditionalStylesCollection = [];
 
     /**
-     * Is the current cell collection sorted already?
-     *
-     * @var bool
-     */
-    private $cellCollectionIsSorted = false;
-
-    /**
      * Collection of breaks.
      *
      * @var array
@@ -267,20 +260,6 @@ class Worksheet implements IComparable
      * @var string
      */
     private $selectedCells = 'A1';
-
-    /**
-     * Cached highest column.
-     *
-     * @var string
-     */
-    private $cachedHighestColumn = 'A';
-
-    /**
-     * Cached highest row.
-     *
-     * @var int
-     */
-    private $cachedHighestRow = 1;
 
     /**
      * Right-to-left?
@@ -1047,7 +1026,7 @@ class Worksheet implements IComparable
     public function getHighestColumn($row = null)
     {
         if ($row == null) {
-            return $this->cachedHighestColumn;
+            return $this->cellCollection->getCachedHighestColumn();
         }
 
         return $this->getHighestDataColumn($row);
@@ -1077,7 +1056,7 @@ class Worksheet implements IComparable
     public function getHighestRow($column = null)
     {
         if ($column == null) {
-            return $this->cachedHighestRow;
+            return $this->cellCollection->getCachedHighestRow();
         }
 
         return $this->getHighestDataRow($column);
@@ -1217,7 +1196,7 @@ class Worksheet implements IComparable
         }
 
         // Create new cell object, if required
-        return $createIfNotExists ? $this->createNewCell($pCoordinate) : null;
+        return $createIfNotExists ? $this->cellCollection->createNewCell($pCoordinate) : null;
     }
 
     /**
@@ -1240,43 +1219,7 @@ class Worksheet implements IComparable
         }
 
         // Create new cell object, if required
-        return $createIfNotExists ? $this->createNewCell($coordinate) : null;
-    }
-
-    /**
-     * Create a new cell at the specified coordinate.
-     *
-     * @param string $pCoordinate Coordinate of the cell
-     *
-     * @return Cell Cell that was created
-     */
-    private function createNewCell($pCoordinate)
-    {
-        $cell = new Cell(null, DataType::TYPE_NULL, $this);
-        $this->cellCollection->add($pCoordinate, $cell);
-        $this->cellCollectionIsSorted = false;
-
-        // Coordinates
-        $aCoordinates = Coordinate::coordinateFromString($pCoordinate);
-        if (Coordinate::columnIndexFromString($this->cachedHighestColumn) < Coordinate::columnIndexFromString($aCoordinates[0])) {
-            $this->cachedHighestColumn = $aCoordinates[0];
-        }
-        $this->cachedHighestRow = max($this->cachedHighestRow, $aCoordinates[1]);
-
-        // Cell needs appropriate xfIndex from dimensions records
-        //    but don't create dimension records if they don't already exist
-        $rowDimension = $this->getRowDimension($aCoordinates[1], false);
-        $columnDimension = $this->getColumnDimension($aCoordinates[0], false);
-
-        if ($rowDimension !== null && $rowDimension->getXfIndex() > 0) {
-            // then there is a row dimension with explicit style, assign it to the cell
-            $cell->setXfIndex($rowDimension->getXfIndex());
-        } elseif ($columnDimension !== null && $columnDimension->getXfIndex() > 0) {
-            // then there is a column dimension, assign it to the cell
-            $cell->setXfIndex($columnDimension->getXfIndex());
-        }
-
-        return $cell;
+        return $createIfNotExists ? $this->cellCollection->createNewCell($coordinate) : null;
     }
 
     /**
@@ -1361,7 +1304,7 @@ class Worksheet implements IComparable
             }
             $this->rowDimensions[$pRow] = new RowDimension($pRow);
 
-            $this->cachedHighestRow = max($this->cachedHighestRow, $pRow);
+            $this->cellCollection->setCachedHighestRow(max($this->cellCollection->getCachedHighestRow(), $pRow));
         }
 
         return $this->rowDimensions[$pRow];
@@ -1387,8 +1330,8 @@ class Worksheet implements IComparable
             }
             $this->columnDimensions[$pColumn] = new ColumnDimension($pColumn);
 
-            if (Coordinate::columnIndexFromString($this->cachedHighestColumn) < Coordinate::columnIndexFromString($pColumn)) {
-                $this->cachedHighestColumn = $pColumn;
+            if (Coordinate::columnIndexFromString($this->cellCollection->getCachedHighestColumn()) < Coordinate::columnIndexFromString($pColumn)) {
+                $this->cellCollection->setCachedHighestColumn($pColumn);
             }
         }
 
@@ -2683,11 +2626,11 @@ class Worksheet implements IComparable
 
         // Cache values
         if ($highestColumn < 1) {
-            $this->cachedHighestColumn = 'A';
+            $this->cellCollection->setCachedHighestColumn('A');
         } else {
-            $this->cachedHighestColumn = Coordinate::stringFromColumnIndex($highestColumn);
+            $this->cellCollection->setCachedHighestColumn(Coordinate::stringFromColumnIndex($highestColumn));
         }
-        $this->cachedHighestRow = $highestRow;
+        $this->cellCollection->setCachedHighestRow($highestRow);
 
         // Return
         return $this;
