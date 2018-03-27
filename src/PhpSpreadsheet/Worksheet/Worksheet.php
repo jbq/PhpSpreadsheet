@@ -2476,7 +2476,7 @@ class Worksheet implements IComparable
      *
      * @return Worksheet
      */
-    public function fromArray(array $source, $nullValue = null, $startCell = 'A1', $strictNullComparison = false)
+    public function fromArray(array $source, $nullValue = null, $startCell = 'A1', $strictNullComparison = false, ?array $explicitTypes=NULL)
     {
         //    Convert a 1-D array to 2-D (for ease of looping)
         if (!is_array(end($source))) {
@@ -2489,16 +2489,16 @@ class Worksheet implements IComparable
         // Loop through $source
         foreach ($source as $rowData) {
             $currentColumn = $startColumn;
-            foreach ($rowData as $cellValue) {
+            foreach ($rowData as $pos => $cellValue) {
                 if ($strictNullComparison) {
                     if ($cellValue !== $nullValue) {
                         // Set cell value
-                        $this->getCell($currentColumn . $startRow)->setValue($cellValue);
+                        $this->_setCellValue($currentColumn, $startRow, $cellValue, $pos, $explicitTypes);
                     }
                 } else {
                     if ($cellValue != $nullValue) {
                         // Set cell value
-                        $this->getCell($currentColumn . $startRow)->setValue($cellValue);
+                        $this->_setCellValue($currentColumn, $startRow, $cellValue, $pos, $explicitTypes);
                     }
                 }
                 ++$currentColumn;
@@ -2507,6 +2507,15 @@ class Worksheet implements IComparable
         }
 
         return $this;
+    }
+
+    private function _setCellValue(string $col, string $row, $value, int $pos, ?array $explicitTypes) {
+        $cell = $this->getCell($col . $row);
+
+        if ($explicitTypes !== NULL)
+            $cell->setValueExplicit($value, $explicitTypes[$pos]);
+        else
+            $cell->setValue($value);
     }
 
     /**
